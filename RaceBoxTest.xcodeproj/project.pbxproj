@@ -12,6 +12,8 @@
 		810BB62B28C8832B00D10F3E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 810BB62A28C8832B00D10F3E /* Assets.xcassets */; };
 		810BB62E28C8832B00D10F3E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 810BB62D28C8832B00D10F3E /* Preview Assets.xcassets */; };
 		810BB63528C883DD00D10F3E /* RaceBoxManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 810BB63428C883DD00D10F3E /* RaceBoxManager.swift */; };
+		812892B028D07E3C004B70E0 /* RaceBoxData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812892AF28D07E3C004B70E0 /* RaceBoxData.swift */; };
+		812892B228D07E76004B70E0 /* RaceBoxBluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812892B128D07E76004B70E0 /* RaceBoxBluetooth.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +24,8 @@
 		810BB62D28C8832B00D10F3E /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		810BB63428C883DD00D10F3E /* RaceBoxManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaceBoxManager.swift; sourceTree = "<group>"; };
 		810BB63B28C88D3C00D10F3E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		812892AF28D07E3C004B70E0 /* RaceBoxData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaceBoxData.swift; sourceTree = "<group>"; };
+		812892B128D07E76004B70E0 /* RaceBoxBluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaceBoxBluetooth.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,10 +58,10 @@
 		810BB62528C8832A00D10F3E /* RaceBoxTest */ = {
 			isa = PBXGroup;
 			children = (
+				812892AE28D07898004B70E0 /* RaceBox */,
 				810BB63B28C88D3C00D10F3E /* Info.plist */,
 				810BB62628C8832A00D10F3E /* RaceBoxTestApp.swift */,
 				810BB62828C8832A00D10F3E /* ContentView.swift */,
-				810BB63428C883DD00D10F3E /* RaceBoxManager.swift */,
 				810BB62A28C8832B00D10F3E /* Assets.xcassets */,
 				810BB62C28C8832B00D10F3E /* Preview Content */,
 			);
@@ -70,6 +74,16 @@
 				810BB62D28C8832B00D10F3E /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		812892AE28D07898004B70E0 /* RaceBox */ = {
+			isa = PBXGroup;
+			children = (
+				810BB63428C883DD00D10F3E /* RaceBoxManager.swift */,
+				812892B128D07E76004B70E0 /* RaceBoxBluetooth.swift */,
+				812892AF28D07E3C004B70E0 /* RaceBoxData.swift */,
+			);
+			path = RaceBox;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -144,7 +158,9 @@
 			files = (
 				810BB62928C8832A00D10F3E /* ContentView.swift in Sources */,
 				810BB63528C883DD00D10F3E /* RaceBoxManager.swift in Sources */,
+				812892B028D07E3C004B70E0 /* RaceBoxData.swift in Sources */,
 				810BB62728C8832A00D10F3E /* RaceBoxTestApp.swift in Sources */,
+				812892B228D07E76004B70E0 /* RaceBoxBluetooth.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

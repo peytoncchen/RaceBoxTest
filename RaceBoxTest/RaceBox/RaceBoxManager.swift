@@ -7,102 +7,42 @@
 
 import Foundation
 import CoreBluetooth
-import CoreImage
+import CoreMotion
 
-extension Data {
-    func scanValue<T>(start: Int, length: Int) -> T {
-        return self.subdata(in: start..<start+length).withUnsafeBytes { $0.pointee }
-    }
+protocol RaceBoxMiniDelegate: AnyObject {
+    func didUpdate(connected: Bool) -> Void
+    func didUpdateGpsInfo(modelNumber: String, isCharging: Bool, batteryLevel: Float) -> Void
+    func didUpdatePositionData(date: Date,
+                               fixType: Int,
+                               latitude: Float,
+                               longitude: Float,
+                               altitude: Float,
+                               speedMph: Float,
+                               heading: Float,
+                               satellitesInUse: Int,
+                               acceleration: CMAcceleration,
+                               rotationRate: CMRotationRate) -> Void
 }
-
-extension CBPeripheral: Identifiable {
-    public var id: UUID { return UUID() }
-}
-
-struct RaceBoxData {
-    var iTow: UInt32
-    var year: UInt16
-    var month: Int8
-    var day: Int8
-    var hour: Int8
-    var minute: Int8
-    var second: Int8
-    var validityFlags: UInt8
-    var timeAccuracy: UInt32 // ignoring
-    var nanoseconds: Int32 // ignoring
-    var fixStatus: Int8
-    var fixStatusFlags: UInt8 // ignoring
-    var dateTimeFlags: UInt8 // ignoring
-    var numberOfSVs: Int8
-    var longitude: Int32
-    var latitude: Int32
-    var wgsAltitude: Int32
-    var mslAltitude: Int32
-    var horizontalAccuracy: UInt32 // ignoring
-    var verticalAccuracy: UInt32 // ignoring
-    var speed: Int32
-    var heading: Int32
-    var speedAccuracy: UInt32 // ignoring
-    var headingAccuracy: UInt32 // ignoring
-    var pdop: UInt16
-    var latLongFlags: UInt8 // ignoring
-    var batteryStatus: UInt8
-    var gForceX: Int16
-    var gForceY: Int16
-    var gForceZ: Int16
-    var rotationRateX: Int16
-    var rotationRateY: Int16
-    var rotationRateZ: Int16
-}
-
-struct ProcessedRaceBoxData {
-    var date: Date
-    var fixStatus: String
-    var validityFlags: String
-    var numberofSVs: Int
-    var longitude: Float
-    var latitude: Float
-    var wgsAltitude: Float // converted from mm -> ft
-    var speed: Float // converted from mm/s -> mph
-    var heading: Float
-    var batteryCharging: Bool
-    var batteryLevel: UInt
-    var gForceX: Float
-    var gForceY: Float
-    var gForceZ: Float
-    var rotationRateX: Float
-    var rotationRateY: Float
-    var rotationRateZ: Float
-}
-
-let RaceBoxBLEServiceUUID = CBUUID(string: "6e400001-b5a3-f393-e0a9-e50e24dcca9e")
-let RaceBoxBLETxCharacteristicUUID = CBUUID(string: "6e400003-b5a3-f393-e0a9-e50e24dcca9e")
-let FULL_PAYLOAD_LENGTH = 80
 
 class RaceBoxManager: NSObject, ObservableObject {
-    
-    var central: CBCentralManager!
-    var timer: Timer!
-    @Published var connectedPeripheral: Optional<CBPeripheral> = nil
+
     @Published var peripherals = [CBPeripheral]()
+    @Published var connectedPeripheral: Optional<CBPeripheral> = nil
     @Published var currentPacket: Optional<ProcessedRaceBoxData> = nil
     @Published var peripheralRSSI: Optional<NSNumber> = nil
+    @Published var peripheralSerialNumber: Optional<String> = nil
     @Published var connecting = false
     
-    var incompleteData = [Data]()
-    var batteryStatus: UInt = 100
+    private var central: CBCentralManager!
+    private var timer: Timer!
+    private var incompleteData = [Data]()
+    private var batteryStatus: UInt = 100
     
     override init() {
         super.init()
 
         central = CBCentralManager(delegate: self, queue: nil)
         central.delegate = self
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: { _ in
-            if self.connectedPeripheral != nil {
-                self.checkBatteryStatus()
-            }
-        })
     }
     
     func connectTo(peripheral: CBPeripheral) {
@@ -124,10 +64,11 @@ class RaceBoxManager: NSObject, ObservableObject {
     }
 }
 
+// -- CentralManager Functions
 extension RaceBoxManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state == .poweredOn {
-            central.scanForPeripherals(withServices: [RaceBoxBLEServiceUUID], options: nil)
+            central.scanForPeripherals(withServices: [RaceBoxBLEServiceUUID, RaceBoxBLEDeviceInfoServiceUUID], options: nil)
         }
     }
     
@@ -142,25 +83,33 @@ extension RaceBoxManager: CBCentralManagerDelegate {
         connecting = false
         connectedPeripheral = peripheral
         connectedPeripheral!.delegate = self
-        connectedPeripheral!.discoverServices([RaceBoxBLEServiceUUID])
+        connectedPeripheral!.discoverServices([RaceBoxBLEServiceUUID, RaceBoxBLEDeviceInfoServiceUUID])
         central.stopScan()
         peripherals.removeAll()
+        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: { _ in
+            if self.connectedPeripheral != nil {
+                self.checkBatteryStatus()
+            }
+        })
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         print("Disconnected from \(peripheral)")
         connectedPeripheral = nil
-        central.scanForPeripherals(withServices: [RaceBoxBLEServiceUUID], options: nil)
+        central.scanForPeripherals(withServices: [RaceBoxBLEServiceUUID, RaceBoxBLEDeviceInfoServiceUUID], options: nil)
         currentPacket = nil
         peripheralRSSI = nil
+        timer = nil
     }
 }
 
+// -- Peripheral Functions
 extension RaceBoxManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard let services = peripheral.services else { return }
+        print(services)
         for service in services {
-            peripheral.discoverCharacteristics([RaceBoxBLETxCharacteristicUUID], for: service)
+            peripheral.discoverCharacteristics([RaceBoxBLETxCharacteristicUUID, RaceBoxBLESerialNumberCharacteristicUUID], for: service)
         }
     }
 
@@ -169,7 +118,10 @@ extension RaceBoxManager: CBPeripheralDelegate {
 
         for characteristic in characteristics {
             print(characteristic)
-
+            if characteristic.properties.contains(.read) {
+                print("\(characteristic.uuid): properties contains .read")
+                peripheral.readValue(for: characteristic)
+            }
             if characteristic.properties.contains(.notify) {
                 print("\(characteristic.uuid): properties contains .notify")
                 peripheral.setNotifyValue(true, for: characteristic)
@@ -179,16 +131,6 @@ extension RaceBoxManager: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         peripheralRSSI = RSSI
-    }
-    
-    private func handlePayload(payload: Data) {
-        let raceBoxData = parsePayload(payload: payload)
-        let processedRaceBoxData = processRaceBoxData(raceBoxData: raceBoxData)
-        currentPacket = processedRaceBoxData
-        
-        if processedRaceBoxData.batteryLevel != batteryStatus {
-            batteryStatus = processedRaceBoxData.batteryLevel
-        }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
@@ -223,26 +165,45 @@ extension RaceBoxManager: CBPeripheralDelegate {
                 print("Invalid checksum, skipping packet")
             }
             
+        case RaceBoxBLESerialNumberCharacteristicUUID:
+            let serialNumber = deviceInfo(from: characteristic)
+            peripheralSerialNumber = serialNumber
+            
         default:
             print("Unhandled Characteristic UUID: \(characteristic.uuid)")
         }
         peripheral.readRSSI()
     }
+}
 
+// -- Private data-handling functions
+extension RaceBoxManager {
     private func gpsData(from characteristic: CBCharacteristic) -> Data {
         guard let characteristicData = characteristic.value else { return Data() }
         return characteristicData
     }
-}
-
-extension RaceBoxManager {
+    
+    private func deviceInfo(from characteristic: CBCharacteristic) -> String {
+      guard let characteristicData = characteristic.value else { return "Error fetching Device Info" }
+        return String(decoding: characteristicData, as: UTF8.self)
+    }
+    
+    private func handlePayload(payload: Data) {
+        let raceBoxData = parsePayload(payload: payload)
+        let processedRaceBoxData = processRaceBoxData(raceBoxData: raceBoxData)
+        currentPacket = processedRaceBoxData
+        
+        if processedRaceBoxData.batteryLevel != batteryStatus {
+            batteryStatus = processedRaceBoxData.batteryLevel
+        }
+    }
     
     private func assertFrameStart(gpsData: Data) -> Bool {
-        return gpsData.scanValue(start: 0, length: 2) == 0x62B5
+        return gpsData.scanValue(start: 0, length: 2) == 0x62b5
     }
     
     private func assertMsgClassAndId(gpsData: Data) -> Bool {
-        return gpsData.scanValue(start: 2, length: 2) == 0x01FF
+        return gpsData.scanValue(start: 2, length: 2) == 0x01ff
     }
     
     private func assertChecksum(gpsData: Data) -> Bool {
@@ -252,8 +213,8 @@ extension RaceBoxManager {
             CK_A += gpsData.scanValue(start: i, length: 1)
             CK_B += CK_A
         }
-        return gpsData.scanValue(start: gpsData.count - 2, length: 1) == (CK_A & 0xFF) &&
-            gpsData.scanValue(start: gpsData.count - 1, length: 1) == (CK_B & 0xFF)
+        return gpsData.scanValue(start: gpsData.count - 2, length: 1) == (CK_A & 0xff) &&
+            gpsData.scanValue(start: gpsData.count - 1, length: 1) == (CK_B & 0xff)
     }
     
     private func readPayloadLength(gpsData: Data) -> UInt16 {
@@ -302,14 +263,14 @@ extension RaceBoxManager {
     
     private func determineFixStatus(fixStatus: Int) -> String {
         switch fixStatus {
-            case 0:
-                return "no fix"
-            case 2:
-                return "2D fix"
-            case 3:
-                return "3D fix"
-            default:
-                return "Error parsing fix status value"
+        case 0:
+            return "no fix"
+        case 2:
+            return "2D fix"
+        case 3:
+            return "3D fix"
+        default:
+            return "Error parsing fix status value"
         }
     }
     
@@ -318,13 +279,13 @@ extension RaceBoxManager {
         if validityFlags & 0x1 == 1 {
             result += "valid date\n"
         }
-        if validityFlags & 0x10 == 1 {
+        if (validityFlags >> 1) & 0x1 == 1 {
             result += "valid time\n"
         }
-        if validityFlags & 0x100 == 1 {
+        if (validityFlags >> 2) & 0x1 == 1 {
             result += "fully resolved\n"
         }
-        if validityFlags & 0x1000 == 1 {
+        if (validityFlags >> 3) & 0x1 == 1 {
             result += "valid magnetic declination\n"
         }
         if result == "" {
@@ -354,7 +315,7 @@ extension RaceBoxManager {
                                     speed: Float(raceBoxData.speed) * 0.00223694,
                                     heading: Float(raceBoxData.heading) * 1e-5,
                                     batteryCharging: UInt(raceBoxData.batteryStatus) >> 7 == 1,
-                                    batteryLevel: UInt(raceBoxData.batteryStatus) & 0x7F,
+                                    batteryLevel: UInt(raceBoxData.batteryStatus) & 0x7f,
                                     gForceX: Float(raceBoxData.gForceX) / 1000,
                                     gForceY: Float(raceBoxData.gForceY) / 1000,
                                     gForceZ: Float(raceBoxData.gForceZ) / 1000,

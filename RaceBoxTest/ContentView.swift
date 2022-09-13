@@ -38,11 +38,13 @@ struct ContentView: View {
     
 
     var body: some View {
-        VStack (spacing: 10) {
+        VStack (spacing: 5) {
 
             Text("RaceBox Test")
                 .font(.largeTitle)
                 .frame(maxWidth: .infinity, alignment: .center)
+            Text("Discoverable RaceBox Minis")
+                .font(.title3)
             if (bleManager.connectedPeripheral == nil) {
                 List(bleManager.peripherals) { peripheral in
                     Button(action: {
@@ -52,15 +54,15 @@ struct ContentView: View {
                             Text(peripheral.name ?? "Unknown")
                         }
                     }
-                }.frame(height: 200)
+                }.frame(height: 150)
             } else {
                 Text("Disconnect to connect to another RaceBox")
-                    .frame(height: 200)
+                    .frame(height: 150)
             }
             
-            Spacer()
             
-            VStack(spacing: 10) {
+            
+            VStack(spacing: 5) {
                 Text("RaceBox Data Feed")
                     .font(.title3)
                 VStack() {
@@ -126,10 +128,12 @@ struct ContentView: View {
                 } else {
                     Text("Connection Strength RSSI: N/A")
                 }
+                if (self.bleManager.peripheralSerialNumber != nil) {
+                    Text("Peripheral Serial Number: \(bleManager.peripheralSerialNumber!)")
+                } else {
+                    Text("Peripheral Serial Number: N/A")
+                }
             }.padding()
-            
-
-            Spacer()
 
             HStack {
                 VStack(spacing: 10) {
@@ -137,7 +141,7 @@ struct ContentView: View {
                         bleManager.disconnect()
                     }) {
                         Text("Disconnect RaceBox Mini")
-                    }
+                    }.buttonStyle(.bordered)
                 }.padding()
 
                 Spacer()
