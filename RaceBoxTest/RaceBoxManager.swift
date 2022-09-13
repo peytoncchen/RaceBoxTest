@@ -26,12 +26,12 @@ struct RaceBoxData {
     var hour: Int8
     var minute: Int8
     var second: Int8
-    var validityFlags: Int8
+    var validityFlags: UInt8
     var timeAccuracy: UInt32 // ignoring
     var nanoseconds: Int32 // ignoring
     var fixStatus: Int8
-    var fixStatusFlags: Int8 // ignoring
-    var dateTimeFlags: Int8 // ignoring
+    var fixStatusFlags: UInt8 // ignoring
+    var dateTimeFlags: UInt8 // ignoring
     var numberOfSVs: Int8
     var longitude: Int32
     var latitude: Int32
@@ -44,8 +44,8 @@ struct RaceBoxData {
     var speedAccuracy: UInt32 // ignoring
     var headingAccuracy: UInt32 // ignoring
     var pdop: UInt16
-    var latLongFlags: Int8 // ignoring
-    var batteryStatus: Int8
+    var latLongFlags: UInt8 // ignoring
+    var batteryStatus: UInt8
     var gForceX: Int16
     var gForceY: Int16
     var gForceZ: Int16
@@ -65,7 +65,7 @@ struct ProcessedRaceBoxData {
     var speed: Float // converted from mm/s -> mph
     var heading: Float
     var batteryCharging: Bool
-    var batteryLevel: Int
+    var batteryLevel: UInt
     var gForceX: Float
     var gForceY: Float
     var gForceZ: Float
@@ -88,7 +88,7 @@ class RaceBoxManager: NSObject, ObservableObject {
     @Published var peripheralRSSI: Optional<NSNumber> = nil
     
     var incompleteData = [Data]()
-    var batteryStatus = 100
+    var batteryStatus: UInt = 100
     
     override init() {
         super.init()
@@ -97,7 +97,9 @@ class RaceBoxManager: NSObject, ObservableObject {
         central.delegate = self
         
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: { _ in
-            self.checkBatteryStatus()
+            if self.connectedPeripheral != nil {
+                self.checkBatteryStatus()
+            }
         })
     }
     
@@ -306,22 +308,22 @@ extension RaceBoxManager {
         }
     }
     
-    private func determineValidityFlags(validityFlags: Int) -> String {
+    private func determineValidityFlags(validityFlags: UInt) -> String {
         var result = ""
         if validityFlags & 0x1 == 1 {
-            result += "valid date "
+            result += "valid date\n"
         }
         if validityFlags & 0x10 == 1 {
-            result += "valid time "
+            result += "valid time\n"
         }
         if validityFlags & 0x100 == 1 {
-            result += "fully resolved "
+            result += "fully resolved\n"
         }
         if validityFlags & 0x1000 == 1 {
-            result += "valid magnetic declination "
+            result += "valid magnetic declination\n"
         }
         if result == "" {
-            return "all validity flags false"
+            return "all validity flags false\n"
         }
         return result
     }
@@ -339,15 +341,15 @@ extension RaceBoxManager {
         let currentDate = calendar.date(from: dateComponents)!
         return ProcessedRaceBoxData(date: currentDate,
                                     fixStatus: determineFixStatus(fixStatus: Int(raceBoxData.fixStatus)),
-                                    validityFlags: determineValidityFlags(validityFlags: Int(raceBoxData.validityFlags)),
+                                    validityFlags: determineValidityFlags(validityFlags: UInt(raceBoxData.validityFlags)),
                                     numberofSVs: Int(raceBoxData.numberOfSVs),
                                     longitude: Float(raceBoxData.longitude) * 1e-7,
                                     latitude: Float(raceBoxData.latitude) * 1e-7,
                                     wgsAltitude: Float(raceBoxData.wgsAltitude) * 1e-3 * 3.28084,
                                     speed: Float(raceBoxData.speed) * 0.00223694,
                                     heading: Float(raceBoxData.heading) * 1e-5,
-                                    batteryCharging: Int(raceBoxData.batteryStatus) & 0x80 == 1,
-                                    batteryLevel: Int(raceBoxData.batteryStatus) & 0x7F,
+                                    batteryCharging: UInt(raceBoxData.batteryStatus) >> 7 == 1,
+                                    batteryLevel: UInt(raceBoxData.batteryStatus) & 0x7F,
                                     gForceX: Float(raceBoxData.gForceX) / 1000,
                                     gForceY: Float(raceBoxData.gForceY) / 1000,
                                     gForceZ: Float(raceBoxData.gForceZ) / 1000,

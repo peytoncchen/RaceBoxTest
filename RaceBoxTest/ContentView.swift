@@ -7,8 +7,21 @@
 
 import SwiftUI
 
+struct ListRows: View {
+    let title: String
+    let value: String
 
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.headline)
 
+            Spacer()
+
+            Text(value)
+        }
+    }
+}
 
 struct ContentView: View {
     
@@ -46,41 +59,59 @@ struct ContentView: View {
                     .font(.title3)
                 VStack() {
                     if (bleManager.currentPacket != nil) {
-                        VStack(spacing: 2) {
-                            Text("Date: \(convertDateToString(date: bleManager.currentPacket!.date))")
-                            Text("Fix Status: \(bleManager.currentPacket!.fixStatus)")
-                            Text("Validity Flags: \(bleManager.currentPacket!.validityFlags)")
-                            Text("Num of Space Vehicles: \(bleManager.currentPacket!.numberofSVs)")
-                            Text("Longitude: \(bleManager.currentPacket!.longitude)")
-                            Text("Latitude: \(bleManager.currentPacket!.latitude)")
+                        List {
+                            VStack {
+                                ListRows(title: "Date", value: "\(convertDateToString(date: bleManager.currentPacket!.date))")
+                                ListRows(title: "Fix Status", value: "\(bleManager.currentPacket!.fixStatus)")
+                                ListRows(title: "Validity Flags", value: "\(bleManager.currentPacket!.validityFlags.trimmingCharacters(in: .whitespacesAndNewlines))")
+                                ListRows(title: "Num of Space Vehicles", value: "\(bleManager.currentPacket!.numberofSVs)")
+                            }
+                            VStack {
+                                ListRows(title: "Longitude", value: "\(bleManager.currentPacket!.longitude)")
+                                ListRows(title: "Latitude", value: "\(bleManager.currentPacket!.latitude)")
+                                ListRows(title: "Speed", value: "\(bleManager.currentPacket!.speed) mph")
+                                ListRows(title: "Heading", value: "\(bleManager.currentPacket!.heading)")
+                                ListRows(title: "WGS Altitude", value: "\(bleManager.currentPacket!.wgsAltitude) feet")
+                            }
+                            VStack {
+                                ListRows(title: "Battery Charging", value: "\(String(bleManager.currentPacket!.batteryCharging))")
+                                ListRows(title: "Battery Level", value: "\(bleManager.currentPacket!.batteryLevel)%")
+                            }
+                            VStack {
+                                
+                                ListRows(title: "GForce X, Y, Z", value: "\(bleManager.currentPacket!.gForceX) \(bleManager.currentPacket!.gForceY) \(bleManager.currentPacket!.gForceZ)")
+                                ListRows(title: "Rotation Rate X, Y, Z", value: "\(bleManager.currentPacket!.rotationRateX) \(bleManager.currentPacket!.rotationRateY) \(bleManager.currentPacket!.rotationRateZ)")
+                            }
+                            
                         }
-                        VStack(spacing: 2) {
-                            Text("WGS Altitude: \(bleManager.currentPacket!.wgsAltitude) feet")
-                            Text("Speed: \(bleManager.currentPacket!.speed) mph")
-                            Text("Heading: \(bleManager.currentPacket!.heading)")
-                            Text("Battery Charging: \(String(bleManager.currentPacket!.batteryCharging))")
-                            Text("Battery Level: \(bleManager.currentPacket!.batteryLevel)%")
-                            Text("GForce X, Y, Z: \(bleManager.currentPacket!.gForceX) \(bleManager.currentPacket!.gForceY) \(bleManager.currentPacket!.gForceZ)")
-                            Text("Rotation Rate X, Y, Z: \(bleManager.currentPacket!.rotationRateX) \(bleManager.currentPacket!.rotationRateY) \(bleManager.currentPacket!.rotationRateZ)")
-                        }
+                        .listStyle(PlainListStyle())
                     } else {
-                        VStack(spacing: 2) {
-                            Text("Date: N/A")
-                            Text("Fix Status: N/A")
-                            Text("Validity Flags: N/A")
-                            Text("Num of Space Vehicles: N/A")
-                            Text("Longitude: N/A")
-                            Text("Latitude: N/A")
+                        List {
+                            VStack {
+                                ListRows(title: "Date", value: "N/A")
+                                ListRows(title: "Fix Status", value: "N/A")
+                                ListRows(title: "Validity Flags", value: "N/A")
+                                ListRows(title: "Num of Space Vehicles", value: "N/A")
+                            }
+                            VStack {
+                                ListRows(title: "Longitude", value: "N/A")
+                                ListRows(title: "Latitude", value: "N/A")
+                                ListRows(title: "Speed", value: "N/A")
+                                ListRows(title: "Heading", value: "N/A")
+                                ListRows(title: "WGS Altitude", value: "N/A")
+                            }
+                            VStack {
+                                ListRows(title: "Battery Charging", value: "N/A")
+                                ListRows(title: "Battery Level", value: "N/A")
+                            }
+                            VStack {
+                                
+                                ListRows(title: "GForce X, Y, Z", value: "N/A")
+                                ListRows(title: "Rotation Rate X, Y, Z", value: "N/A")
+                            }
+                            
                         }
-                        VStack(spacing: 2) {
-                            Text("WGS Altitude: N/A feet")
-                            Text("Speed: N/A mph")
-                            Text("Heading: N/A")
-                            Text("Battery Charging: N/A")
-                            Text("Battery Level: N/A %")
-                            Text("GForce X, Y, Z: N/A")
-                            Text("Rotation Rate X, Y, Z: N/A")
-                        }
+                        .listStyle(PlainListStyle())
                     }
                 }
                 
