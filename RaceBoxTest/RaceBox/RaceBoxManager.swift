@@ -73,7 +73,8 @@ extension RaceBoxManager: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        if (!peripherals.contains(peripheral)) {
+        let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        if ((name != nil) && name!.starts(with: "RaceBox Mini")) && !peripherals.contains(peripheral) {
             peripherals.append(peripheral)
         }
     }
