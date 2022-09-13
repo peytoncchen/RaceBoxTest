@@ -57,7 +57,7 @@ class RaceBoxManager: NSObject, ObservableObject {
     }
     
     private func checkBatteryStatus(){
-        print("Checking battery...")
+        print("Checking battery status...")
         if batteryStatus <= 2 { // disconnect if less than 2 percent
             disconnect()
         }
@@ -99,6 +99,7 @@ extension RaceBoxManager: CBCentralManagerDelegate {
         central.scanForPeripherals(withServices: [RaceBoxBLEServiceUUID, RaceBoxBLEDeviceInfoServiceUUID], options: nil)
         currentPacket = nil
         peripheralRSSI = nil
+        peripheralSerialNumber = nil
         timer = nil
     }
 }
@@ -304,6 +305,7 @@ extension RaceBoxManager {
                                            minute: Int(raceBoxData.minute),
                                            second: Int(raceBoxData.second),
                                            nanosecond: Int(raceBoxData.nanoseconds))
+        
         let currentDate = calendar.date(from: dateComponents)!
         return ProcessedRaceBoxData(date: currentDate,
                                     fixStatus: determineFixStatus(fixStatus: Int(raceBoxData.fixStatus)),
