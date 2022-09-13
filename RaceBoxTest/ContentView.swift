@@ -43,15 +43,21 @@ struct ContentView: View {
             Text("RaceBox Test")
                 .font(.largeTitle)
                 .frame(maxWidth: .infinity, alignment: .center)
-            List(bleManager.peripherals) { peripheral in
-                Button(action: {
-                    bleManager.connectTo(peripheral: peripheral)
-                }) {
-                    HStack {
-                        Text(peripheral.name ?? "Unknown")
+            if (bleManager.connectedPeripheral == nil) {
+                List(bleManager.peripherals) { peripheral in
+                    Button(action: {
+                        bleManager.connectTo(peripheral: peripheral)
+                    }) {
+                        HStack {
+                            Text(peripheral.name ?? "Unknown")
+                        }
                     }
-                }
-            }.frame(height: 200)
+                }.frame(height: 200)
+            } else {
+                Text("Disconnect to connect to another RaceBox")
+                    .frame(height: 200)
+            }
+            
             Spacer()
             
             VStack(spacing: 10) {
@@ -130,19 +136,22 @@ struct ContentView: View {
                     Button(action: {
                         bleManager.disconnect()
                     }) {
-                        Text("Disconnect Peripheral")
+                        Text("Disconnect RaceBox Mini")
                     }
                 }.padding()
 
                 Spacer()
                 
                 VStack (spacing: 10) {
-                    Text("Peripheral Status")
+                    Text("RaceBox Mini Status")
                         .font(.headline)
                     
                     if (bleManager.connectedPeripheral != nil) {
                         Text("Connected to \(bleManager.connectedPeripheral!.name ?? "a peripheral with no name")")
                             .foregroundColor(.green)
+                    } else if (bleManager.connecting) {
+                        Text("Connecting...")
+                            .foregroundColor(.yellow)
                     } else {
                         Text("Not connected to anything")
                             .foregroundColor(.red)

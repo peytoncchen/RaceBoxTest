@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreBluetooth
+import CoreImage
 
 extension Data {
     func scanValue<T>(start: Int, length: Int) -> T {
@@ -86,6 +87,7 @@ class RaceBoxManager: NSObject, ObservableObject {
     @Published var peripherals = [CBPeripheral]()
     @Published var currentPacket: Optional<ProcessedRaceBoxData> = nil
     @Published var peripheralRSSI: Optional<NSNumber> = nil
+    @Published var connecting = false
     
     var incompleteData = [Data]()
     var batteryStatus: UInt = 100
@@ -105,6 +107,7 @@ class RaceBoxManager: NSObject, ObservableObject {
     
     func connectTo(peripheral: CBPeripheral) {
         central.connect(peripheral)
+        connecting = true
     }
     
     func disconnect() {
@@ -136,10 +139,12 @@ extension RaceBoxManager: CBCentralManagerDelegate {
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Connected to \(peripheral)")
+        connecting = false
         connectedPeripheral = peripheral
         connectedPeripheral!.delegate = self
         connectedPeripheral!.discoverServices([RaceBoxBLEServiceUUID])
         central.stopScan()
+        peripherals.removeAll()
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
@@ -181,7 +186,7 @@ extension RaceBoxManager: CBPeripheralDelegate {
         let processedRaceBoxData = processRaceBoxData(raceBoxData: raceBoxData)
         currentPacket = processedRaceBoxData
         
-        if processedRaceBoxData.batteryLevel != batteryStatus { // Disconnect if lower than 2% battery
+        if processedRaceBoxData.batteryLevel != batteryStatus {
             batteryStatus = processedRaceBoxData.batteryLevel
         }
     }
