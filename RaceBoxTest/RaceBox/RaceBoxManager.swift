@@ -9,19 +9,19 @@ import Foundation
 import CoreBluetooth
 import CoreMotion
 
-protocol RaceBoxMiniDelegate: AnyObject {
-    func didUpdate(connected: Bool) -> Void
-    func didUpdateGpsInfo(modelNumber: String, isCharging: Bool, batteryLevel: Float) -> Void
-    func didUpdatePositionData(date: Date,
-                               fixType: Int,
-                               latitude: Float,
-                               longitude: Float,
-                               altitude: Float,
-                               speedMph: Float,
-                               heading: Float,
-                               satellitesInUse: Int,
-                               acceleration: CMAcceleration,
-                               rotationRate: CMRotationRate) -> Void
+// Sneaky way to silence the deprecation warning
+// Need to use as (data as DataWithScan).scanValue(...)
+// It wants to type the return value from withUnsafeBytes but
+// the whole point is to not... so decided to just silence it.
+private protocol DataWithScan {
+    func scanValue<T>(start: Int, length: Int) -> T
+}
+
+extension Data: DataWithScan {
+    @available(iOS, deprecated: 12.2)
+    func scanValue<T>(start: Int, length: Int) -> T {
+        return self.subdata(in: start..<start+length).withUnsafeBytes { $0.pointee }
+    }
 }
 
 class RaceBoxManager: NSObject, ObservableObject {
@@ -158,6 +158,8 @@ extension RaceBoxManager: CBPeripheralDelegate {
                                 aggregatedPayload.append(contentsOf: getPayload(gpsData: data, payloadLength: Int(readPayloadLength(gpsData: data))))
                             }
                             handlePayload(payload: aggregatedPayload)
+                            incompleteData.removeAll()
+                            print("Incomplete packets reconstructed, handling...")
                         }
                     }
                 } else {
@@ -201,26 +203,26 @@ extension RaceBoxManager {
     }
     
     private func assertFrameStart(gpsData: Data) -> Bool {
-        return gpsData.scanValue(start: 0, length: 2) == 0x62b5
+        return (gpsData as DataWithScan).scanValue(start: 0, length: 2) == 0x62b5
     }
     
     private func assertMsgClassAndId(gpsData: Data) -> Bool {
-        return gpsData.scanValue(start: 2, length: 2) == 0x01ff
+        return (gpsData as DataWithScan).scanValue(start: 2, length: 2) == 0x01ff
     }
     
     private func assertChecksum(gpsData: Data) -> Bool {
         var CK_A = 0
         var CK_B = 0
         for i in 2..<gpsData.count - 2 {
-            CK_A += gpsData.scanValue(start: i, length: 1)
+            CK_A += (gpsData as DataWithScan).scanValue(start: i, length: 1)
             CK_B += CK_A
         }
-        return gpsData.scanValue(start: gpsData.count - 2, length: 1) == (CK_A & 0xff) &&
-            gpsData.scanValue(start: gpsData.count - 1, length: 1) == (CK_B & 0xff)
+        return (gpsData as DataWithScan).scanValue(start: gpsData.count - 2, length: 1) == (CK_A & 0xff) &&
+        (gpsData as DataWithScan).scanValue(start: gpsData.count - 1, length: 1) == (CK_B & 0xff)
     }
     
     private func readPayloadLength(gpsData: Data) -> UInt16 {
-        return gpsData.scanValue(start: 4, length: 2)
+        return (gpsData as DataWithScan).scanValue(start: 4, length: 2)
     }
     
     private func getPayload(gpsData: Data, payloadLength: Int) -> Data {
@@ -228,39 +230,39 @@ extension RaceBoxManager {
     }
     
     private func parsePayload(payload: Data) -> RaceBoxData {
-        return RaceBoxData(iTow: payload.scanValue(start: 0, length: 4),
-                           year: payload.scanValue(start: 4, length: 2),
-                           month: payload.scanValue(start: 6, length: 1),
-                           day: payload.scanValue(start: 7, length: 1),
-                           hour: payload.scanValue(start: 8, length: 1),
-                           minute: payload.scanValue(start: 9, length: 1),
-                           second: payload.scanValue(start: 10, length: 1),
-                           validityFlags: payload.scanValue(start: 11, length: 1),
-                           timeAccuracy: payload.scanValue(start: 12, length: 4),
-                           nanoseconds: payload.scanValue(start: 16, length: 4),
-                           fixStatus: payload.scanValue(start: 20, length: 1),
-                           fixStatusFlags: payload.scanValue(start: 21, length: 1),
-                           dateTimeFlags: payload.scanValue(start: 22, length: 1),
-                           numberOfSVs: payload.scanValue(start: 23, length: 1),
-                           longitude: payload.scanValue(start: 24, length: 4),
-                           latitude: payload.scanValue(start: 28, length: 4),
-                           wgsAltitude: payload.scanValue(start: 32, length: 4),
-                           mslAltitude: payload.scanValue(start: 36, length: 4),
-                           horizontalAccuracy: payload.scanValue(start: 40, length: 4),
-                           verticalAccuracy: payload.scanValue(start: 44, length: 4),
-                           speed: payload.scanValue(start: 48, length: 4),
-                           heading: payload.scanValue(start: 52, length: 4),
-                           speedAccuracy: payload.scanValue(start: 56, length: 4),
-                           headingAccuracy: payload.scanValue(start: 60, length: 4),
-                           pdop: payload.scanValue(start: 64, length: 2),
-                           latLongFlags: payload.scanValue(start: 66, length: 1),
-                           batteryStatus: payload.scanValue(start: 67, length: 1),
-                           gForceX: payload.scanValue(start: 68, length: 2),
-                           gForceY: payload.scanValue(start: 70, length: 2),
-                           gForceZ: payload.scanValue(start: 72, length: 2),
-                           rotationRateX: payload.scanValue(start: 74, length: 2),
-                           rotationRateY: payload.scanValue(start: 76, length: 2),
-                           rotationRateZ: payload.scanValue(start: 78, length: 2))
+        return RaceBoxData(iTow: (payload as DataWithScan).scanValue(start: 0, length: 4),
+                           year: (payload as DataWithScan).scanValue(start: 4, length: 2),
+                           month: (payload as DataWithScan).scanValue(start: 6, length: 1),
+                           day: (payload as DataWithScan).scanValue(start: 7, length: 1),
+                           hour: (payload as DataWithScan).scanValue(start: 8, length: 1),
+                           minute: (payload as DataWithScan).scanValue(start: 9, length: 1),
+                           second: (payload as DataWithScan).scanValue(start: 10, length: 1),
+                           validityFlags: (payload as DataWithScan).scanValue(start: 11, length: 1),
+                           timeAccuracy: (payload as DataWithScan).scanValue(start: 12, length: 4),
+                           nanoseconds: (payload as DataWithScan).scanValue(start: 16, length: 4),
+                           fixStatus: (payload as DataWithScan).scanValue(start: 20, length: 1),
+                           fixStatusFlags: (payload as DataWithScan).scanValue(start: 21, length: 1),
+                           dateTimeFlags: (payload as DataWithScan).scanValue(start: 22, length: 1),
+                           numberOfSVs: (payload as DataWithScan).scanValue(start: 23, length: 1),
+                           longitude: (payload as DataWithScan).scanValue(start: 24, length: 4),
+                           latitude: (payload as DataWithScan).scanValue(start: 28, length: 4),
+                           wgsAltitude: (payload as DataWithScan).scanValue(start: 32, length: 4),
+                           mslAltitude: (payload as DataWithScan).scanValue(start: 36, length: 4),
+                           horizontalAccuracy: (payload as DataWithScan).scanValue(start: 40, length: 4),
+                           verticalAccuracy: (payload as DataWithScan).scanValue(start: 44, length: 4),
+                           speed: (payload as DataWithScan).scanValue(start: 48, length: 4),
+                           heading: (payload as DataWithScan).scanValue(start: 52, length: 4),
+                           speedAccuracy: (payload as DataWithScan).scanValue(start: 56, length: 4),
+                           headingAccuracy: (payload as DataWithScan).scanValue(start: 60, length: 4),
+                           pdop: (payload as DataWithScan).scanValue(start: 64, length: 2),
+                           latLongFlags: (payload as DataWithScan).scanValue(start: 66, length: 1),
+                           batteryStatus: (payload as DataWithScan).scanValue(start: 67, length: 1),
+                           gForceX: (payload as DataWithScan).scanValue(start: 68, length: 2),
+                           gForceY: (payload as DataWithScan).scanValue(start: 70, length: 2),
+                           gForceZ: (payload as DataWithScan).scanValue(start: 72, length: 2),
+                           rotationRateX: (payload as DataWithScan).scanValue(start: 74, length: 2),
+                           rotationRateY: (payload as DataWithScan).scanValue(start: 76, length: 2),
+                           rotationRateZ: (payload as DataWithScan).scanValue(start: 78, length: 2))
     }
     
     private func determineFixStatus(fixStatus: Int) -> String {

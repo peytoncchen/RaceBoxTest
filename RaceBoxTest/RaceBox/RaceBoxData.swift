@@ -7,12 +7,6 @@
 
 import Foundation
 
-extension Data {
-    func scanValue<T>(start: Int, length: Int) -> T {
-        return self.subdata(in: start..<start+length).withUnsafeBytes { $0.pointee }
-    }
-}
-
 struct RaceBoxData {
     var iTow: UInt32
     var year: UInt16
