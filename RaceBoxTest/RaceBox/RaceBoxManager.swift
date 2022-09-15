@@ -62,7 +62,7 @@ class RaceBoxManager: NSObject, ObservableObject {
     
     func connectTo(peripheral: CBPeripheral) {
         central.connect(peripheral)
-        connecting = true
+        connecting = true // ignoring RT warning here seems like glitch in XCode 14.0
     }
     
     func disconnect() {
