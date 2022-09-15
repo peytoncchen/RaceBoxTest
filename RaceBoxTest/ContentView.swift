@@ -92,7 +92,7 @@ struct ContentView: View {
                             }
                             
                         }
-                        .listStyle(PlainListStyle())
+                        .listStyle(.insetGrouped)
                     } else {
                         List {
                             VStack {
@@ -119,9 +119,11 @@ struct ContentView: View {
                             }
                             
                         }
-                        .listStyle(PlainListStyle())
+                        .listStyle(.insetGrouped)
                     }
-                }
+                }.overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .circular).stroke(Color(uiColor: .tertiaryLabel), lineWidth: 1)
+                )
                 
                 if (self.bleManager.peripheralRSSI != nil) {
                     Text("Connection Strength RSSI: \(bleManager.peripheralRSSI!)")
@@ -133,7 +135,7 @@ struct ContentView: View {
                 } else {
                     Text("Peripheral Serial Number: N/A")
                 }
-                Text("Last con-discon cycle Hz: \(bleManager.Hz)")
+                Text("Hz since connection: \(bleManager.Hz)")
             }.padding()
 
             HStack {

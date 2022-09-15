@@ -107,8 +107,7 @@ extension RaceBoxManager: CBCentralManagerDelegate {
         peripheralRSSI = nil
         peripheralSerialNumber = nil
         isFirstBatteryLevelRead = true
-        let elapsed = (NSDate.timeIntervalSinceReferenceDate) - startTime
-        Hz = Double(packetCount) / elapsed
+        Hz = 0.0
     }
 }
 
@@ -152,6 +151,8 @@ extension RaceBoxManager: CBPeripheralDelegate {
                         let payload = getPayload(gpsData: data, payloadLength: FULL_PAYLOAD_LENGTH)
                         handlePayload(payload: payload)
                         packetCount += 1
+                        let elapsed = (NSDate.timeIntervalSinceReferenceDate) - startTime
+                        Hz = Double(packetCount) / elapsed
                     } else {
                         print("Incomplete packet received, handling...")
                         incompleteData.append(data)
@@ -168,6 +169,8 @@ extension RaceBoxManager: CBPeripheralDelegate {
                             incompleteData.removeAll()
                             print("Incomplete packets reconstructed, handling...")
                             packetCount += 1
+                            let elapsed = (NSDate.timeIntervalSinceReferenceDate) - startTime
+                            Hz = Double(packetCount) / elapsed
                         }
                     }
                 } else {
