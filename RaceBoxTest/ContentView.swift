@@ -54,7 +54,7 @@ struct ContentView: View {
                             Text(peripheral.name ?? "Unknown")
                         }
                     }
-                }.frame(height: 150)
+                }.frame(height: 135)
             } else {
                 Text("Disconnect to connect to another RaceBox")
                     .frame(height: 150)
@@ -133,6 +133,7 @@ struct ContentView: View {
                 } else {
                     Text("Peripheral Serial Number: N/A")
                 }
+                Text("Last con-discon cycle Hz: \(bleManager.Hz)")
             }.padding()
 
             HStack {

@@ -48,17 +48,17 @@ struct ProcessedRaceBoxData {
     var fixStatus: String
     var validityFlags: String
     var numberofSVs: Int
-    var longitude: Float
-    var latitude: Float
-    var wgsAltitude: Float // converted from mm -> ft
-    var speed: Float // converted from mm/s -> mph
-    var heading: Float
+    var longitude: Double
+    var latitude: Double
+    var wgsAltitude: Double // converted from mm -> ft
+    var speed: Double // converted from mm/s -> mph
+    var heading: Double
     var batteryCharging: Bool
     var batteryLevel: UInt
-    var gForceX: Float
-    var gForceY: Float
-    var gForceZ: Float
-    var rotationRateX: Float
-    var rotationRateY: Float
-    var rotationRateZ: Float
+    var gForceX: Double
+    var gForceY: Double
+    var gForceZ: Double
+    var rotationRateX: Double
+    var rotationRateY: Double
+    var rotationRateZ: Double
 }

@@ -25,18 +25,33 @@ extension Data: DataWithScan {
 }
 
 class RaceBoxManager: NSObject, ObservableObject {
-
+    
+    // Central
     @Published var peripherals = [CBPeripheral]()
+    private var central: CBCentralManager!
+    
+    // Peripheral
     @Published var connectedPeripheral: Optional<CBPeripheral> = nil
-    @Published var currentPacket: Optional<ProcessedRaceBoxData> = nil
     @Published var peripheralRSSI: Optional<NSNumber> = nil
-    @Published var peripheralSerialNumber: Optional<String> = nil
     @Published var connecting = false
     
-    private var central: CBCentralManager!
-    private var timer: Timer!
+    // Peripheral Data
+    @Published var currentPacket: Optional<ProcessedRaceBoxData> = nil
+    @Published var peripheralSerialNumber: Optional<String> = nil
     private var incompleteData = [Data]()
+    
+    // Peripheral Battery Level
+    // For whatever reason if you disconnect and reconnect the RaceBox,
+    // the first battery level reading to come through is 0%... which is a problem
+    // because we check if it's less than or equal to 2% and ask to disconnect.
+    // I solve this by skipping the first reading.
     private var batteryStatus: UInt = 100
+    private var isFirstBatteryLevelRead = true
+    
+    // To measure Hz
+    var startTime: TimeInterval!
+    var packetCount = 0
+    @Published var Hz: Double = 0.0
     
     override init() {
         super.init()
@@ -53,13 +68,6 @@ class RaceBoxManager: NSObject, ObservableObject {
     func disconnect() {
         if (connectedPeripheral != nil) {
             central.cancelPeripheralConnection(connectedPeripheral!)
-        }
-    }
-    
-    private func checkBatteryStatus(){
-        print("Checking battery status...")
-        if batteryStatus <= 2 { // disconnect if less than 2 percent
-            disconnect()
         }
     }
 }
@@ -87,11 +95,8 @@ extension RaceBoxManager: CBCentralManagerDelegate {
         connectedPeripheral!.discoverServices([RaceBoxBLEServiceUUID, RaceBoxBLEDeviceInfoServiceUUID])
         central.stopScan()
         peripherals.removeAll()
-        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true, block: { _ in
-            if self.connectedPeripheral != nil {
-                self.checkBatteryStatus()
-            }
-        })
+        packetCount = 0
+        startTime = (NSDate.timeIntervalSinceReferenceDate)
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
@@ -101,7 +106,9 @@ extension RaceBoxManager: CBCentralManagerDelegate {
         currentPacket = nil
         peripheralRSSI = nil
         peripheralSerialNumber = nil
-        timer = nil
+        isFirstBatteryLevelRead = true
+        let elapsed = (NSDate.timeIntervalSinceReferenceDate) - startTime
+        Hz = Double(packetCount) / elapsed
     }
 }
 
@@ -144,7 +151,7 @@ extension RaceBoxManager: CBPeripheralDelegate {
                     if readPayloadLength(gpsData: data) == FULL_PAYLOAD_LENGTH {
                         let payload = getPayload(gpsData: data, payloadLength: FULL_PAYLOAD_LENGTH)
                         handlePayload(payload: payload)
-                        
+                        packetCount += 1
                     } else {
                         print("Incomplete packet received, handling...")
                         incompleteData.append(data)
@@ -160,6 +167,7 @@ extension RaceBoxManager: CBPeripheralDelegate {
                             handlePayload(payload: aggregatedPayload)
                             incompleteData.removeAll()
                             print("Incomplete packets reconstructed, handling...")
+                            packetCount += 1
                         }
                     }
                 } else {
@@ -197,8 +205,12 @@ extension RaceBoxManager {
         let processedRaceBoxData = processRaceBoxData(raceBoxData: raceBoxData)
         currentPacket = processedRaceBoxData
         
-        if processedRaceBoxData.batteryLevel != batteryStatus {
-            batteryStatus = processedRaceBoxData.batteryLevel
+        if !isFirstBatteryLevelRead && processedRaceBoxData.batteryLevel <= 2 {
+            print("disconnecting because battery is at 2%")// disconnect if less than 2 percent
+            disconnect()
+        }
+        if isFirstBatteryLevelRead {
+            isFirstBatteryLevelRead = true
         }
     }
     
@@ -314,19 +326,19 @@ extension RaceBoxManager {
                                     fixStatus: determineFixStatus(fixStatus: Int(raceBoxData.fixStatus)),
                                     validityFlags: determineValidityFlags(validityFlags: UInt(raceBoxData.validityFlags)),
                                     numberofSVs: Int(raceBoxData.numberOfSVs),
-                                    longitude: Float(raceBoxData.longitude) * 1e-7,
-                                    latitude: Float(raceBoxData.latitude) * 1e-7,
-                                    wgsAltitude: Float(raceBoxData.wgsAltitude) * 1e-3 * 3.28084,
-                                    speed: Float(raceBoxData.speed) * 0.00223694,
-                                    heading: Float(raceBoxData.heading) * 1e-5,
+                                    longitude: Double(raceBoxData.longitude) * 1e-7,
+                                    latitude: Double(raceBoxData.latitude) * 1e-7,
+                                    wgsAltitude: Double(raceBoxData.wgsAltitude) * 1e-3 * 3.280839895,
+                                    speed: Double(raceBoxData.speed) * 0.00223693629,
+                                    heading: Double(raceBoxData.heading) * 1e-5,
                                     batteryCharging: UInt(raceBoxData.batteryStatus) >> 7 == 1,
                                     batteryLevel: UInt(raceBoxData.batteryStatus) & 0x7f,
-                                    gForceX: Float(raceBoxData.gForceX) / 1000,
-                                    gForceY: Float(raceBoxData.gForceY) / 1000,
-                                    gForceZ: Float(raceBoxData.gForceZ) / 1000,
-                                    rotationRateX: Float(raceBoxData.rotationRateX) / 100,
-                                    rotationRateY: Float(raceBoxData.rotationRateY) / 100,
-                                    rotationRateZ: Float(raceBoxData.rotationRateZ) / 100)
+                                    gForceX: Double(raceBoxData.gForceX) / 1000,
+                                    gForceY: Double(raceBoxData.gForceY) / 1000,
+                                    gForceZ: Double(raceBoxData.gForceZ) / 1000,
+                                    rotationRateX: Double(raceBoxData.rotationRateX) / 100,
+                                    rotationRateY: Double(raceBoxData.rotationRateY) / 100,
+                                    rotationRateZ: Double(raceBoxData.rotationRateZ) / 100)
     }
 }
 
