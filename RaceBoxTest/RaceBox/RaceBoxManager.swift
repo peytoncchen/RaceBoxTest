@@ -213,7 +213,7 @@ extension RaceBoxManager {
             disconnect()
         }
         if isFirstBatteryLevelRead {
-            isFirstBatteryLevelRead = true
+            isFirstBatteryLevelRead = false
         }
     }
     
