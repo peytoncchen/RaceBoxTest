@@ -75,11 +75,11 @@ struct ContentView: View {
                                 ListRows(title: "Num of Space Vehicles", value: "\(bleManager.currentPacket!.numberofSVs)")
                             }
                             VStack {
-                                ListRows(title: "Longitude", value: "\(bleManager.currentPacket!.longitude)")
-                                ListRows(title: "Latitude", value: "\(bleManager.currentPacket!.latitude)")
-                                ListRows(title: "Speed", value: "\(bleManager.currentPacket!.speed) mph")
-                                ListRows(title: "Heading", value: "\(bleManager.currentPacket!.heading)")
-                                ListRows(title: "WGS Altitude", value: "\(bleManager.currentPacket!.wgsAltitude) feet")
+                                ListRows(title: "Longitude", value: "\(String(format: "%.5f", bleManager.currentPacket!.longitude))")
+                                ListRows(title: "Latitude", value: "\(String(format: "%.5f",bleManager.currentPacket!.latitude))")
+                                ListRows(title: "Speed", value: "\(String(format: "%.5f", bleManager.currentPacket!.speed)) mph")
+                                ListRows(title: "Heading", value: "\(String(format: "%.5f", bleManager.currentPacket!.heading))")
+                                ListRows(title: "WGS Altitude", value: "\(String(format: "%.5f", bleManager.currentPacket!.wgsAltitude)) feet")
                             }
                             VStack {
                                 ListRows(title: "Battery Charging", value: "\(String(bleManager.currentPacket!.batteryCharging))")
@@ -87,8 +87,8 @@ struct ContentView: View {
                             }
                             VStack {
                                 
-                                ListRows(title: "GForce X, Y, Z", value: "\(bleManager.currentPacket!.gForceX) \(bleManager.currentPacket!.gForceY) \(bleManager.currentPacket!.gForceZ)")
-                                ListRows(title: "Rotation Rate X, Y, Z", value: "\(bleManager.currentPacket!.rotationRateX) \(bleManager.currentPacket!.rotationRateY) \(bleManager.currentPacket!.rotationRateZ)")
+                                ListRows(title: "GForce (XYZ)", value: "\(String(format: "%.3f", bleManager.currentPacket!.gForceX)) \(String(format: "%.3f", bleManager.currentPacket!.gForceY)) \(String(format: "%.3f",bleManager.currentPacket!.gForceZ))")
+                                ListRows(title: "Rotation Rate (XYZ)", value: "\(String(format: "%.3f", bleManager.currentPacket!.rotationRateX)) \(String(format: "%.3f", bleManager.currentPacket!.rotationRateY)) \(String(format: "%.3f", bleManager.currentPacket!.rotationRateZ))")
                             }
                             
                         }
@@ -135,7 +135,7 @@ struct ContentView: View {
                 } else {
                     Text("Peripheral Serial Number: N/A")
                 }
-                Text("Hz since connection: \(bleManager.Hz)")
+                Text("Hz since connection: \(String(format: "%.5f", bleManager.Hz)) Hz")
             }.padding()
 
             HStack {
